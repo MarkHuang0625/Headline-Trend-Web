@@ -9,7 +9,7 @@ type TrendListProps = {
 
 export function TrendList({ trends, headlines, activeKeyword, onSelectKeyword }: TrendListProps) {
   return (
-    <section className="grid gap-3">
+    <section className="grid min-w-0 gap-3">
       {trends.map((trend, index) => {
         const related = headlines.filter((headline) => trend.related_headlines.includes(headline.id));
         const isActive = activeKeyword === trend.keyword;
@@ -18,7 +18,7 @@ export function TrendList({ trends, headlines, activeKeyword, onSelectKeyword }:
           <button
             key={trend.keyword}
             onClick={() => onSelectKeyword(trend.keyword)}
-            className={`grid gap-3 border p-4 text-left transition ${
+            className={`grid min-w-0 gap-3 overflow-hidden border p-4 text-left transition ${
               isActive
                 ? "border-cyan-300 bg-cyan-300/8"
                 : "border-white/8 bg-white/[0.02] hover:border-white/20"
@@ -53,9 +53,9 @@ export function TrendList({ trends, headlines, activeKeyword, onSelectKeyword }:
               </div>
             </div>
 
-            <div className="space-y-1 text-sm text-slate-400">
+            <div className="min-w-0 space-y-1 text-sm text-slate-400">
               {related.slice(0, 2).map((headline) => (
-                <p key={headline.id} className="truncate">
+                <p key={headline.id} className="block max-w-full truncate">
                   {headline.headline}
                 </p>
               ))}
@@ -66,4 +66,3 @@ export function TrendList({ trends, headlines, activeKeyword, onSelectKeyword }:
     </section>
   );
 }
-

@@ -8,14 +8,14 @@ type TrendChartProps = {
 
 export function TrendChart({ trend }: TrendChartProps) {
   return (
-    <section className="border border-white/8 bg-white/[0.02] p-5">
-      <div className="flex items-end justify-between gap-4">
-        <div>
+    <section className="min-w-0 border border-white/8 bg-white/[0.02] p-5">
+      <div className="flex min-w-0 items-end justify-between gap-4">
+        <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.32em] text-slate-500">Frequency Curve</p>
-          <h2 className="mt-2 text-2xl text-white">{trend ? trend.keyword : "Select a trend"}</h2>
+          <h2 className="mt-2 truncate text-2xl text-white">{trend ? trend.keyword : "Select a trend"}</h2>
         </div>
         {trend ? (
-          <p className="text-sm text-slate-400">
+          <p className="shrink-0 text-sm text-slate-400">
             {trend.status} signal with {trend.recent_count} recent mentions
           </p>
         ) : null}
@@ -54,4 +54,3 @@ export function TrendChart({ trend }: TrendChartProps) {
     </section>
   );
 }
-

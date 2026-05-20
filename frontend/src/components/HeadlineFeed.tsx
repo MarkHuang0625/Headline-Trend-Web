@@ -4,12 +4,16 @@ import type { HeadlineRecord } from "../types";
 type HeadlineFeedProps = {
   headlines: HeadlineRecord[];
   activeKeyword: string | null;
+  relatedHeadlineIds?: number[];
 };
 
-export function HeadlineFeed({ headlines, activeKeyword }: HeadlineFeedProps) {
-  const visible = activeKeyword
-    ? headlines.filter((headline) => headline.headline.toLowerCase().includes(activeKeyword.toLowerCase()))
-    : headlines;
+export function HeadlineFeed({ headlines, activeKeyword, relatedHeadlineIds = [] }: HeadlineFeedProps) {
+  const relatedIds = new Set(relatedHeadlineIds);
+  const visible = relatedIds.size
+    ? headlines.filter((headline) => relatedIds.has(headline.id))
+    : activeKeyword
+      ? headlines.filter((headline) => headline.headline.toLowerCase().includes(activeKeyword.toLowerCase()))
+      : headlines;
 
   return (
     <section className="flex min-h-[720px] flex-col border-l border-white/10 bg-[#060c16]/90">
@@ -27,7 +31,18 @@ export function HeadlineFeed({ headlines, activeKeyword }: HeadlineFeedProps) {
               <span>{headline.source}</span>
               <span>{formatRelativeTime(headline.timestamp)}</span>
             </div>
-            <p className="mt-3 text-sm leading-6 text-slate-100">{headline.headline}</p>
+            {headline.url ? (
+              <a
+                href={headline.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 block text-sm leading-6 text-slate-100 transition hover:text-cyan-200"
+              >
+                {headline.headline}
+              </a>
+            ) : (
+              <p className="mt-3 text-sm leading-6 text-slate-100">{headline.headline}</p>
+            )}
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
               <span>{formatCategory(headline.category)}</span>
               {headline.ticker ? <span>{headline.ticker}</span> : null}
@@ -35,8 +50,10 @@ export function HeadlineFeed({ headlines, activeKeyword }: HeadlineFeedProps) {
             </div>
           </article>
         ))}
+        {!visible.length ? (
+          <p className="px-5 py-4 text-sm text-slate-500">No matching headlines in this window.</p>
+        ) : null}
       </div>
     </section>
   );
 }
-

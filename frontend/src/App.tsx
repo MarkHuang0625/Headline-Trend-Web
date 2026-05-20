@@ -81,8 +81,8 @@ export default function App() {
           onWindowHoursChange={(windowHours) => setFilters((current) => ({ ...current, windowHours }))}
         />
 
-        <section className="px-5 py-5 sm:px-8 lg:px-10">
-          <div className="flex flex-col gap-6">
+        <section className="min-w-0 px-5 py-5 sm:px-8 lg:px-10">
+          <div className="flex min-w-0 flex-col gap-6">
             <header className="grid gap-4 border-b border-white/8 pb-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.34em] text-slate-500">Real-Time Trend Map</p>
@@ -118,7 +118,7 @@ export default function App() {
               </div>
               <div className="border border-white/8 bg-white/[0.02] p-4">
                 <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Tracked Headlines</p>
-                <p className="mt-2 text-3xl text-white">{data?.headlines.length ?? 0}</p>
+                <p className="mt-2 text-3xl text-white">{data?.tracked_headline_count ?? data?.headlines.length ?? 0}</p>
               </div>
               <div className="border border-white/8 bg-white/[0.02] p-4">
                 <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Top Signal</p>
@@ -129,14 +129,14 @@ export default function App() {
             {error ? <p className="border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">{error}</p> : null}
             {loading && !data ? <p className="text-sm text-slate-400">Loading dashboard...</p> : null}
 
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
               <TrendList
                 trends={data?.trends ?? []}
                 headlines={data?.headlines ?? []}
                 activeKeyword={activeKeyword}
                 onSelectKeyword={setActiveKeyword}
               />
-              <div className="grid gap-5">
+              <div className="grid min-w-0 gap-5">
                 <TrendChart trend={selectedTrend} />
                 <CategoryBreakdown data={data?.category_breakdown ?? []} />
               </div>
@@ -144,9 +144,12 @@ export default function App() {
           </div>
         </section>
 
-        <HeadlineFeed headlines={data?.headlines ?? []} activeKeyword={activeKeyword} />
+        <HeadlineFeed
+          headlines={data?.headlines ?? []}
+          activeKeyword={activeKeyword}
+          relatedHeadlineIds={selectedTrend?.related_headlines}
+        />
       </main>
     </div>
   );
 }
-

@@ -3,6 +3,7 @@ export type HeadlineRecord = {
   headline: string;
   source: string;
   timestamp: string;
+  url: string | null;
   category: string;
   ticker: string | null;
   sentiment: "positive" | "negative" | "neutral";
@@ -32,9 +33,9 @@ export type CategoryBreakdownItem = {
 export type DashboardResponse = {
   generated_at: string;
   window_hours: number;
+  tracked_headline_count: number;
   trends: TrendItem[];
   category_breakdown: CategoryBreakdownItem[];
   headlines: HeadlineRecord[];
   available_tickers: string[];
 };
-

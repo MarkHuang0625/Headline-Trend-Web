@@ -8,6 +8,7 @@ class HeadlineRecord(BaseModel):
     headline: str
     source: str
     timestamp: datetime
+    url: str | None = None
     category: str
     ticker: str | None = None
     sentiment: str
@@ -37,8 +38,8 @@ class CategoryBreakdownItem(BaseModel):
 class DashboardResponse(BaseModel):
     generated_at: datetime
     window_hours: int
+    tracked_headline_count: int
     trends: list[TrendItem]
     category_breakdown: list[CategoryBreakdownItem]
     headlines: list[HeadlineRecord]
     available_tickers: list[str]
-
