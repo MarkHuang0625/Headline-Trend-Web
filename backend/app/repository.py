@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import sqlite3
 from threading import Lock
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from .classification import classify_category, classify_sentiment, extract_ticker
+from .headline_dedup import dedupe_headlines, headlines_are_similar
+from .nlp.pipeline import analyze_headline
 from .models import HeadlineRecord
 from .sample_data import build_seed_rows
 
@@ -76,9 +77,11 @@ class HeadlineRepository:
         url: str | None = None,
         external_id: str | None = None,
     ) -> HeadlineRecord:
-        category, tags = classify_category(headline)
-        ticker = extract_ticker(headline)
-        sentiment = classify_sentiment(headline)
+        analysis = analyze_headline(headline)
+        category = analysis.category
+        tags = analysis.tags
+        ticker = analysis.ticker
+        sentiment = analysis.sentiment
         resolved_timestamp = (timestamp or datetime.now(timezone.utc)).astimezone(timezone.utc)
 
         with self._lock:
@@ -96,6 +99,10 @@ class HeadlineRepository:
                 ).fetchone()
                 if existing:
                     return self._row_to_record(existing)
+
+            similar = self._find_similar_headline(headline, resolved_timestamp)
+            if similar:
+                return similar
 
             cursor = self.connection.execute(
                 """
@@ -148,12 +155,14 @@ class HeadlineRepository:
             query += " AND ticker = ?"
             params.append(ticker.upper())
 
+        fetch_limit = min(limit * 4, 2000)
         query += " ORDER BY timestamp DESC LIMIT ?"
-        params.append(limit)
+        params.append(fetch_limit)
 
         with self._lock:
             rows = self.connection.execute(query, tuple(params)).fetchall()
-        return [self._row_to_record(row) for row in rows]
+        records = [self._row_to_record(row) for row in rows]
+        return dedupe_headlines(records)[:limit]
 
     def all_headlines(self, *, hours: int = 24) -> list[HeadlineRecord]:
         window_start = datetime.now(timezone.utc).timestamp() - (hours * 3600)
@@ -170,6 +179,25 @@ class HeadlineRepository:
                 "SELECT DISTINCT ticker FROM headlines WHERE ticker IS NOT NULL ORDER BY ticker ASC"
             ).fetchall()
         return [row["ticker"] for row in rows]
+
+    def _find_similar_headline(self, headline: str, timestamp: datetime) -> HeadlineRecord | None:
+        window_start = timestamp - timedelta(hours=72)
+        with self._lock:
+            rows = self.connection.execute(
+                """
+                SELECT * FROM headlines
+                WHERE timestamp >= ?
+                ORDER BY timestamp DESC
+                LIMIT 300
+                """,
+                (window_start.isoformat(),),
+            ).fetchall()
+
+        for row in rows:
+            record = self._row_to_record(row)
+            if headlines_are_similar(headline, record.headline):
+                return record
+        return None
 
     def _row_to_record(self, row: sqlite3.Row) -> HeadlineRecord:
         return HeadlineRecord(

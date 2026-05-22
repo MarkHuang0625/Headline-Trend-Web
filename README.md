@@ -16,7 +16,8 @@ Headline Trend Web is a full-stack market news trend dashboard. It ingests marke
 - Frontend: React, TypeScript, Vite, Tailwind CSS, Recharts
 - Backend: FastAPI, SQLite
 - Data layer: repository pattern around SQLite storage
-- Classification: lightweight keyword and dictionary-based heuristics
+- NLP: FinBERT sentiment, DistilBERT zero-shot categories, MiniLM embeddings + agglomerative clustering
+- Classification fallback: keyword and dictionary-based heuristics when `NLP_MODE=rules`
 
 ## Project Structure
 
@@ -25,6 +26,11 @@ Headline Trend Web is a full-stack market news trend dashboard. It ingests marke
 ├── backend
 │   ├── app
 │   │   ├── classification.py
+│   │   ├── nlp/
+│   │   │   ├── category.py
+│   │   │   ├── pipeline.py
+│   │   │   ├── sentiment.py
+│   │   │   └── trends.py
 │   │   ├── main.py
 │   │   ├── models.py
 │   │   ├── repository.py
@@ -79,6 +85,25 @@ OPENAI_MODEL=gpt-4o-mini
 
 `LLM_TREND_REFINEMENT=auto` enables refinement only when `OPENAI_API_KEY` is present. Use `LLM_TREND_REFINEMENT=off` to force rule-only trend detection.
 
+### NLP pipeline (default)
+
+The backend now runs a real NLP stack on ingest and dashboard trend detection:
+
+```bash
+NLP_MODE=models          # models | hybrid | rules
+NLP_TREND_CLUSTERING=auto
+SENTIMENT_MODEL=ProsusAI/finbert
+ZERO_SHOT_MODEL=typeform/distilbert-base-uncased-mnli
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+CLUSTER_DISTANCE_THRESHOLD=0.42
+```
+
+- `models`: FinBERT sentiment + zero-shot category labels + embedding trend clusters
+- `hybrid`: rule-based categories with FinBERT sentiment
+- `rules`: original keyword heuristics only (no model download)
+
+First run downloads model weights into the local Hugging Face cache. Use `NLP_MODE=rules` if you only want the lightweight MVP behavior.
+
 ### 2. Start the frontend
 
 ```bash
@@ -107,8 +132,8 @@ echo 'VITE_API_BASE_URL=http://127.0.0.1:8000' > .env.local
 
 1. The backend seeds a local SQLite database with sample market headlines as a starter dataset.
 2. RSS feeds are periodically polled for real market headlines.
-3. Headlines are classified by category, ticker relevance, and sentiment.
-4. Trend aggregation logic scores recurring themes over time windows.
+3. Headlines are analyzed with FinBERT sentiment and zero-shot topic classification (or rule fallback).
+4. Trend detection embeds headlines with MiniLM and clusters related stories; TF-IDF labels each cluster.
 5. Optional LLM refinement removes noisy terms and merges related trend candidates into cleaner market themes.
 6. The frontend queries the dashboard APIs and renders trend charts, category mixes, and live headline views.
 
@@ -122,5 +147,6 @@ echo 'VITE_API_BASE_URL=http://127.0.0.1:8000' > .env.local
 
 - Add source-specific parsers for paid market news APIs
 - Add authentication and saved watchlists
-- Add LLM-assisted headline clustering and summarization
+- Fine-tune a domain classifier on labeled finance headlines
+- Add extractive/abstractive trend summaries per cluster
 - Deploy the frontend and backend as separate services

@@ -24,14 +24,14 @@ export function Sidebar({
   onWindowHoursChange,
 }: SidebarProps) {
   return (
-    <aside className="flex min-h-[720px] flex-col justify-between border-r border-white/10 bg-[#07111f]/90 p-6">
+    <aside className="flex min-h-[720px] flex-col justify-between border-r border-slate-200 bg-white p-6 shadow-sm">
       <div className="space-y-8">
         <div className="space-y-3">
-          <p className="text-[11px] uppercase tracking-[0.35em] text-cyan-300/80">Market Pulse</p>
-          <h1 className="max-w-[10rem] font-serif text-3xl leading-none text-white">
+          <p className="text-[11px] uppercase tracking-[0.35em] text-sky-600">Market Pulse</p>
+          <h1 className="max-w-[10rem] font-serif text-3xl leading-none text-slate-900">
             Headline trend terminal
           </h1>
-          <p className="max-w-[12rem] text-sm leading-6 text-slate-400">
+          <p className="max-w-[12rem] text-sm leading-6 text-slate-600">
             Watch macro, sector, stock, and geopolitical narratives form in real time.
           </p>
         </div>
@@ -43,14 +43,14 @@ export function Sidebar({
               <button
                 key={category}
                 onClick={() => onSelectCategory(category)}
-                className={`flex w-full items-center justify-between border px-3 py-2 text-left text-sm transition ${
+                className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
                   activeCategory === category
-                    ? "border-cyan-300 bg-cyan-400/10 text-cyan-100"
-                    : "border-white/8 text-slate-400 hover:border-white/20 hover:text-white"
+                    ? "border-sky-400 bg-sky-50 text-sky-800"
+                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white hover:text-slate-900"
                 }`}
               >
                 <span>{formatCategory(category)}</span>
-                <span className="text-xs text-slate-500">{category === "all" ? "ALL" : "LIVE"}</span>
+                <span className="text-xs text-slate-400">{category === "all" ? "ALL" : "LIVE"}</span>
               </button>
             ))}
           </div>
@@ -63,10 +63,10 @@ export function Sidebar({
               <button
                 key={hours}
                 onClick={() => onWindowHoursChange(hours)}
-                className={`flex-1 border px-3 py-2 text-sm transition ${
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm transition ${
                   windowHours === hours
-                    ? "border-amber-300 bg-amber-400/10 text-amber-100"
-                    : "border-white/8 text-slate-400 hover:border-white/20 hover:text-white"
+                    ? "border-amber-400 bg-amber-50 text-amber-800"
+                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white"
                 }`}
               >
                 {hours}h
@@ -80,10 +80,10 @@ export function Sidebar({
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => onSelectTicker("")}
-              className={`border px-3 py-1.5 text-xs transition ${
+              className={`rounded-lg border px-3 py-1.5 text-xs transition ${
                 !activeTicker
-                  ? "border-cyan-300 text-cyan-100"
-                  : "border-white/8 text-slate-400 hover:border-white/20 hover:text-white"
+                  ? "border-sky-400 bg-sky-50 text-sky-800"
+                  : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white"
               }`}
             >
               All
@@ -92,10 +92,10 @@ export function Sidebar({
               <button
                 key={ticker}
                 onClick={() => onSelectTicker(ticker)}
-                className={`border px-3 py-1.5 text-xs transition ${
+                className={`rounded-lg border px-3 py-1.5 text-xs transition ${
                   activeTicker === ticker
-                    ? "border-cyan-300 text-cyan-100"
-                    : "border-white/8 text-slate-400 hover:border-white/20 hover:text-white"
+                    ? "border-sky-400 bg-sky-50 text-sky-800"
+                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white"
                 }`}
               >
                 {ticker}
@@ -105,10 +105,9 @@ export function Sidebar({
         </section>
       </div>
 
-      <div className="border-t border-white/10 pt-5 text-xs leading-5 text-slate-500">
-        Emerging trends are detected from frequency spikes in the most recent slice of the selected window.
+      <div className="border-t border-slate-200 pt-5 text-xs leading-5 text-slate-500">
+        Recent and baseline split the trend chart buckets: earlier half vs later half.
       </div>
     </aside>
   );
 }
-

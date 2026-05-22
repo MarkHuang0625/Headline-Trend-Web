@@ -11,7 +11,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .feeds import FeedHeadline, configured_sources, fetch_feed_headlines, last_fetch_report
 from .llm_refinement import llm_refinement_enabled, refine_trends_with_llm
-from .models import DashboardResponse, HeadlineRecord
+from .models import DashboardResponse, HeadlineRecord, TrendItem
+from .nlp import compute_embedding_trends, nlp_mode, nlp_models_enabled, nlp_trends_enabled
+from .nlp.registry import ensure_models_loaded, model_load_error
 from .repository import HeadlineRepository
 from .sample_data import MOCK_LIVE_VARIANTS
 from .trends import compute_category_breakdown, compute_trends
@@ -50,6 +52,11 @@ def _insert_feed_headline(item: FeedHeadline) -> HeadlineRecord:
     )
 
 
+async def warm_nlp_models() -> None:
+    if nlp_models_enabled():
+        await asyncio.to_thread(ensure_models_loaded)
+
+
 async def poll_rss_ingestion() -> None:
     while True:
         await asyncio.to_thread(ingest_feed_headlines)
@@ -59,6 +66,7 @@ async def poll_rss_ingestion() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     global stream_task
+    asyncio.create_task(warm_nlp_models())
     if INGESTION_MODE == "mock":
         stream_task = asyncio.create_task(simulate_live_ingestion())
     elif INGESTION_MODE == "off":
@@ -87,13 +95,21 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "ingestion_mode": INGESTION_MODE}
+    return {
+        "status": "ok",
+        "ingestion_mode": INGESTION_MODE,
+        "nlp_mode": nlp_mode(),
+    }
 
 
 @app.get("/api/sources")
 def sources() -> dict[str, object]:
     return {
         "ingestion_mode": INGESTION_MODE,
+        "nlp_mode": nlp_mode(),
+        "nlp_trend_clustering": nlp_trends_enabled(),
+        "nlp_models_ready": _nlp_models_ready(),
+        "nlp_model_error": model_load_error(),
         "llm_trend_refinement": llm_refinement_enabled(),
         "rss_poll_seconds": RSS_POLL_SECONDS,
         "dashboard_query_limit": DASHBOARD_QUERY_LIMIT,
@@ -142,7 +158,7 @@ def dashboard(
         hours=window_hours,
         limit=DASHBOARD_QUERY_LIMIT,
     )
-    trends = compute_trends(filtered, window_hours=window_hours)
+    trends = _compute_dashboard_trends(filtered, window_hours=window_hours)
     trends = refine_trends_with_llm(filtered, trends)
     return DashboardResponse(
         generated_at=datetime.now(timezone.utc),
@@ -150,9 +166,65 @@ def dashboard(
         tracked_headline_count=len(filtered),
         trends=trends,
         category_breakdown=compute_category_breakdown(filtered),
-        headlines=filtered[:DASHBOARD_FEED_LIMIT],
+        headlines=_dashboard_headlines(filtered, trends),
         available_tickers=repository.available_tickers(),
     )
+
+
+def _dashboard_headlines(
+    filtered: list[HeadlineRecord],
+    trends: list[TrendItem],
+    *,
+    extra_related: int = 40,
+) -> list[HeadlineRecord]:
+    """Include trend-related IDs even when they fall outside the latest feed slice."""
+    by_id = {headline.id: headline for headline in filtered if headline.id is not None}
+    feed: list[HeadlineRecord] = []
+    seen: set[int] = set()
+
+    for headline in filtered[:DASHBOARD_FEED_LIMIT]:
+        if headline.id is None or headline.id in seen:
+            continue
+        feed.append(headline)
+        seen.add(headline.id)
+
+    for trend in trends:
+        for headline_id in trend.related_headlines:
+            if len(feed) >= DASHBOARD_FEED_LIMIT + extra_related:
+                break
+            if headline_id in seen:
+                continue
+            record = by_id.get(headline_id)
+            if record is None:
+                continue
+            feed.append(record)
+            seen.add(headline_id)
+
+    return feed
+
+
+def _nlp_models_ready() -> bool | None:
+    if not nlp_models_enabled():
+        return True
+    if model_load_error():
+        return False
+    from .nlp.registry import embedding_model, sentiment_pipeline, zero_shot_pipeline
+
+    return any(
+        pipeline.cache_info().currsize > 0
+        for pipeline in (sentiment_pipeline, zero_shot_pipeline, embedding_model)
+    )
+
+
+def _compute_dashboard_trends(headlines: list[HeadlineRecord], *, window_hours: int) -> list[TrendItem]:
+    if nlp_trends_enabled() and ensure_models_loaded():
+        try:
+            embedded = compute_embedding_trends(headlines, window_hours=window_hours)
+            if embedded:
+                return embedded
+        except Exception:
+            pass
+    return compute_trends(headlines, window_hours=window_hours)
 
 
 @app.post("/api/ingest/mock", response_model=HeadlineRecord)
