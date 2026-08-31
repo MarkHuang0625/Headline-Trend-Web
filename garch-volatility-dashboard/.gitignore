@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.matplotlib-cache/
+data/*.csv
+reports/*.csv
+reports/*.png
+reports/*.md
+!data/.gitkeep
+!reports/.gitkeep
